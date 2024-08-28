@@ -20,6 +20,8 @@ public class WorkloadManagementSettings {
     private static final Double DEFAULT_NODE_LEVEL_MEMORY_CANCELLATION_THRESHOLD = 0.9;
     private static final Double DEFAULT_NODE_LEVEL_CPU_REJECTION_THRESHOLD = 0.8;
     private static final Double DEFAULT_NODE_LEVEL_CPU_CANCELLATION_THRESHOLD = 0.9;
+    private static final Long DEFAULT_QUERYGROUP_SERVICE_RUN_INTERVAL_MILLIS = 1000L;
+
     public static final double NODE_LEVEL_MEMORY_CANCELLATION_THRESHOLD_MAX_VALUE = 0.95;
     public static final double NODE_LEVEL_MEMORY_REJECTION_THRESHOLD_MAX_VALUE = 0.9;
     public static final double NODE_LEVEL_CPU_CANCELLATION_THRESHOLD_MAX_VALUE = 0.95;
@@ -80,6 +82,19 @@ public class WorkloadManagementSettings {
         NODE_CPU_CANCELLATION_THRESHOLD_SETTING_NAME,
         DEFAULT_NODE_LEVEL_CPU_CANCELLATION_THRESHOLD,
         Setting.Property.Dynamic,
+        Setting.Property.NodeScope
+    );
+    /**
+     * Setting name for Query Group Service run interval
+     */
+    public static final String QUERYGROUP_SERVICE_RUN_INTERVAL_SETTING_NAME = "wlm.query_group.service.run_interval";
+    /**
+     * Setting to control the run interval of Query Group Service
+     */
+    public static final Setting<Long> QUERYGROUP_SERVICE_RUN_INTERVAL_SETTING = Setting.longSetting(
+        QUERYGROUP_SERVICE_RUN_INTERVAL_SETTING_NAME,
+        DEFAULT_QUERYGROUP_SERVICE_RUN_INTERVAL_MILLIS,
+        1000,
         Setting.Property.NodeScope
     );
 
