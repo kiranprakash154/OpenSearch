@@ -50,6 +50,14 @@ public class QueryGroupService extends AbstractLifecycleComponent implements Clu
     private Set<QueryGroup> activeQueryGroups = new HashSet<>();
     private Set<QueryGroup> deletedQueryGroups = new HashSet<>();
 
+    protected Set<QueryGroup> getDeletedQueryGroups() {
+        return deletedQueryGroups;
+    }
+
+    protected Set<QueryGroup> getActiveQueryGroups() {
+        return activeQueryGroups;
+    }
+
     /**
      * Guice managed constructor
      *
@@ -77,14 +85,13 @@ public class QueryGroupService extends AbstractLifecycleComponent implements Clu
     protected void doRun() {
         Map<String, QueryGroupLevelResourceUsageView> queryGroupLevelResourceUsageViews = queryGroupUsageTracker
             .constructQueryGroupLevelUsageViews();
-        this.activeQueryGroups = getActiveQueryGroups();
+        this.activeQueryGroups = getActiveQueryGroupsFromClusterState();
         DefaultTaskCancellation defaultTaskCancellation = new DefaultTaskCancellation(
             workloadManagementSettings,
             new DefaultTaskSelectionStrategy(),
             queryGroupLevelResourceUsageViews,
             activeQueryGroups,
-            deletedQueryGroups,
-            workloadManagementSettings.getNodeDuressTrackers()::isNodeInDuress
+            deletedQueryGroups
         );
         defaultTaskCancellation.cancelTasks();
     }
@@ -119,7 +126,7 @@ public class QueryGroupService extends AbstractLifecycleComponent implements Clu
     @Override
     protected void doClose() throws IOException {}
 
-    protected Set<QueryGroup> getActiveQueryGroups() {
+    protected Set<QueryGroup> getActiveQueryGroupsFromClusterState() {
         Map<String, QueryGroup> queryGroups = Metadata.builder(clusterService.state().metadata()).getQueryGroups();
         return new HashSet<>(queryGroups.values());
     }
@@ -153,7 +160,7 @@ public class QueryGroupService extends AbstractLifecycleComponent implements Clu
                 this.deletedQueryGroups.add(deletedQueryGroup);
             }
         }
-    }
+    } // tested
 
     /**
      * updates the failure stats for the query group

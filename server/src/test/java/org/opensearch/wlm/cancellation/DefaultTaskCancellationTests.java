@@ -52,8 +52,7 @@ public class DefaultTaskCancellationTests extends OpenSearchTestCase {
                 defaultTaskSelectionStrategy,
                 queryGroupLevelViews,
                 activeQueryGroups,
-                deletedQueryGroups,
-                isNodeInDuress
+                deletedQueryGroups
             );
         }
     }
