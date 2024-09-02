@@ -22,8 +22,8 @@ import org.opensearch.wlm.tracker.QueryGroupResourceUsageTrackerService;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.Mockito.mock;
 import static org.opensearch.threadpool.ThreadPool.Names.SAME;
+import static org.mockito.Mockito.mock;
 
 public class WorkloadManagementTransportInterceptorTests extends OpenSearchTestCase {
 
@@ -46,7 +46,8 @@ public class WorkloadManagementTransportInterceptorTests extends OpenSearchTestC
         mockWorkloadManagementSettings = mock(WorkloadManagementSettings.class);
         mockQueryGroupStateMap = new HashMap<>();
         threadPool = new TestThreadPool(getTestName());
-        sut = new WorkloadManagementTransportInterceptor(threadPool,
+        sut = new WorkloadManagementTransportInterceptor(
+            threadPool,
             new QueryGroupService(
                 mockQueryGroupUsageTracker,
                 mockClusterService,

@@ -1025,7 +1025,10 @@ public class Node implements Closeable {
             QueryGroupResourceUsageTrackerService queryGroupResourceUsageTrackerService = new QueryGroupResourceUsageTrackerService(
                 taskResourceTrackingService
             );
-            WorkloadManagementSettings workloadManagementSettings = new WorkloadManagementSettings(settings, settingsModule.getClusterSettings());
+            WorkloadManagementSettings workloadManagementSettings = new WorkloadManagementSettings(
+                settings,
+                settingsModule.getClusterSettings()
+            );
             final QueryGroupService queryGroupService = new QueryGroupService(
                 queryGroupResourceUsageTrackerService,
                 clusterService,
@@ -1033,7 +1036,7 @@ public class Node implements Closeable {
                 workloadManagementSettings,
                 new HashMap<>()
             ); // We will need to replace this with actual instance of the
-                                                                                 // queryGroupService
+               // queryGroupService
             final QueryGroupRequestOperationListener queryGroupRequestOperationListener = new QueryGroupRequestOperationListener(
                 queryGroupService,
                 threadPool
