@@ -63,6 +63,7 @@ public class QueryGroupRequestOperationListenerTests extends OpenSearchTestCase 
         sut = new QueryGroupRequestOperationListener(queryGroupService, testThreadPool);
     }
 
+    
     public void tearDown() throws Exception {
         super.tearDown();
         testThreadPool.shutdown();
