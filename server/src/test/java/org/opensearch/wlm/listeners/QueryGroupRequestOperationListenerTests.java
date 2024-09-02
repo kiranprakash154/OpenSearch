@@ -8,16 +8,20 @@
 
 package org.opensearch.wlm.listeners;
 
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.concurrency.OpenSearchRejectedExecutionException;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.wlm.QueryGroupService;
 import org.opensearch.wlm.QueryGroupTask;
 import org.opensearch.wlm.ResourceType;
+import org.opensearch.wlm.WorkloadManagementSettings;
 import org.opensearch.wlm.stats.QueryGroupState;
 import org.opensearch.wlm.stats.QueryGroupStats;
+import org.opensearch.wlm.tracker.QueryGroupResourceUsageTrackerService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,6 +37,12 @@ public class QueryGroupRequestOperationListenerTests extends OpenSearchTestCase 
     public static final int ITERATIONS = 20;
     ThreadPool testThreadPool;
     QueryGroupService queryGroupService;
+    private QueryGroupResourceUsageTrackerService mockQueryGroupUsageTracker;
+    private ClusterService mockClusterService;
+    private ThreadPool mockThreadPool;
+    private WorkloadManagementSettings mockWorkloadManagementSettings;
+    private Scheduler.Cancellable mockScheduledFuture;
+    private Map<String, QueryGroupState> mockQueryGroupStateMap;
 
     Map<String, QueryGroupState> queryGroupStateMap;
     String testQueryGroupId;
@@ -40,6 +50,12 @@ public class QueryGroupRequestOperationListenerTests extends OpenSearchTestCase 
 
     public void setUp() throws Exception {
         super.setUp();
+        mockQueryGroupUsageTracker = mock(QueryGroupResourceUsageTrackerService.class);
+        mockClusterService = mock(ClusterService.class);
+        mockThreadPool = mock(ThreadPool.class);
+        mockScheduledFuture = mock(Scheduler.Cancellable.class);
+        mockWorkloadManagementSettings = mock(WorkloadManagementSettings.class);
+        mockQueryGroupStateMap = new HashMap<>();
         queryGroupStateMap = new HashMap<>();
         testQueryGroupId = "safjgagnakg-3r3fads";
         testThreadPool = new TestThreadPool("RejectionTestThreadPool");
@@ -94,7 +110,13 @@ public class QueryGroupRequestOperationListenerTests extends OpenSearchTestCase 
 
         queryGroupStateMap.put(testQueryGroupId, new QueryGroupState());
 
-        queryGroupService = new QueryGroupService(queryGroupStateMap);
+        queryGroupService = new QueryGroupService(
+            mockQueryGroupUsageTracker,
+            mockClusterService,
+            mockThreadPool,
+            mockWorkloadManagementSettings,
+            new HashMap<>()
+        );
 
         sut = new QueryGroupRequestOperationListener(queryGroupService, testThreadPool);
 
@@ -174,7 +196,13 @@ public class QueryGroupRequestOperationListenerTests extends OpenSearchTestCase 
             testThreadPool.getThreadContext().putHeader(QueryGroupTask.QUERY_GROUP_ID_HEADER, threadContextQG_Id);
             queryGroupStateMap.put(testQueryGroupId, new QueryGroupState());
 
-            queryGroupService = new QueryGroupService(queryGroupStateMap);
+            queryGroupService = new QueryGroupService(
+                mockQueryGroupUsageTracker,
+                mockClusterService,
+                mockThreadPool,
+                mockWorkloadManagementSettings,
+                new HashMap<>()
+            );
 
             sut = new QueryGroupRequestOperationListener(queryGroupService, testThreadPool);
             sut.onRequestFailure(null, null);

@@ -11,6 +11,13 @@ package org.opensearch.wlm;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
+import org.opensearch.monitor.jvm.JvmStats;
+import org.opensearch.monitor.process.ProcessProbe;
+import org.opensearch.search.backpressure.settings.NodeDuressSettings;
+import org.opensearch.search.backpressure.trackers.NodeDuressTrackers;
+
+import java.util.EnumMap;
 
 /**
  * Main class to declare Workload Management related settings
@@ -20,6 +27,8 @@ public class WorkloadManagementSettings {
     private static final Double DEFAULT_NODE_LEVEL_MEMORY_CANCELLATION_THRESHOLD = 0.9;
     private static final Double DEFAULT_NODE_LEVEL_CPU_REJECTION_THRESHOLD = 0.8;
     private static final Double DEFAULT_NODE_LEVEL_CPU_CANCELLATION_THRESHOLD = 0.9;
+    private static final Long DEFAULT_QUERYGROUP_SERVICE_RUN_INTERVAL_MILLIS = 1000L;
+
     public static final double NODE_LEVEL_MEMORY_CANCELLATION_THRESHOLD_MAX_VALUE = 0.95;
     public static final double NODE_LEVEL_MEMORY_REJECTION_THRESHOLD_MAX_VALUE = 0.9;
     public static final double NODE_LEVEL_CPU_CANCELLATION_THRESHOLD_MAX_VALUE = 0.95;
@@ -29,6 +38,9 @@ public class WorkloadManagementSettings {
     private Double nodeLevelMemoryRejectionThreshold;
     private Double nodeLevelCpuCancellationThreshold;
     private Double nodeLevelCpuRejectionThreshold;
+    private TimeValue queryGroupServiceRunIntervalInMillis;
+    private NodeDuressTrackers nodeDuressTrackers;
+    private Boolean queryGroupServiceEnabled;
 
     /**
      * Setting name for node level memory based rejection threshold for QueryGroup service
@@ -82,6 +94,27 @@ public class WorkloadManagementSettings {
         Setting.Property.Dynamic,
         Setting.Property.NodeScope
     );
+    public static final String QUERYGROUP_SERVICE_ENABLED_SETTING_NAME = "wlm.query_group.service.enabled";
+
+    public static final Setting<Boolean> QUERYGROUP_SERVICE_ENABLED_SETTING = Setting.boolSetting(
+        QUERYGROUP_SERVICE_ENABLED_SETTING_NAME,
+        false,
+        Setting.Property.Dynamic,
+        Setting.Property.IndexScope
+    );
+    /**
+     * Setting name for Query Group Service run interval
+     */
+    public static final String QUERYGROUP_SERVICE_RUN_INTERVAL_SETTING_NAME = "wlm.query_group.service.run_interval";
+    /**
+     * Setting to control the run interval of Query Group Service
+     */
+    public static final Setting<Long> QUERYGROUP_SERVICE_RUN_INTERVAL_SETTING = Setting.longSetting(
+        QUERYGROUP_SERVICE_RUN_INTERVAL_SETTING_NAME,
+        DEFAULT_QUERYGROUP_SERVICE_RUN_INTERVAL_MILLIS,
+        1000,
+        Setting.Property.NodeScope
+    );
 
     /**
      * QueryGroup service settings constructor
@@ -93,6 +126,9 @@ public class WorkloadManagementSettings {
         nodeLevelMemoryRejectionThreshold = NODE_LEVEL_MEMORY_REJECTION_THRESHOLD.get(settings);
         nodeLevelCpuCancellationThreshold = NODE_LEVEL_CPU_CANCELLATION_THRESHOLD.get(settings);
         nodeLevelCpuRejectionThreshold = NODE_LEVEL_CPU_REJECTION_THRESHOLD.get(settings);
+        queryGroupServiceRunIntervalInMillis = TimeValue.timeValueMillis(QUERYGROUP_SERVICE_RUN_INTERVAL_SETTING.get(settings));
+        nodeDuressTrackers = setupNodeDuressTracker(settings, clusterSettings);
+        queryGroupServiceEnabled = QUERYGROUP_SERVICE_ENABLED_SETTING.get(settings);
 
         ensureRejectionThresholdIsLessThanCancellation(
             nodeLevelMemoryRejectionThreshold,
@@ -111,6 +147,50 @@ public class WorkloadManagementSettings {
         clusterSettings.addSettingsUpdateConsumer(NODE_LEVEL_MEMORY_REJECTION_THRESHOLD, this::setNodeLevelMemoryRejectionThreshold);
         clusterSettings.addSettingsUpdateConsumer(NODE_LEVEL_CPU_CANCELLATION_THRESHOLD, this::setNodeLevelCpuCancellationThreshold);
         clusterSettings.addSettingsUpdateConsumer(NODE_LEVEL_CPU_REJECTION_THRESHOLD, this::setNodeLevelCpuRejectionThreshold);
+    }
+
+    /**
+     * Gets the interval at which the Query Group Service runs.
+     *
+     * @return the interval as a \`TimeValue\` object.
+     */
+    public TimeValue getQueryGroupServiceRunInterval() {
+        return queryGroupServiceRunIntervalInMillis;
+    }
+
+    /**
+     * Gets the \`NodeDuressTrackers\` instance which tracks the node duress state.
+     *
+     * @return the \`NodeDuressTrackers\` instance.
+     */
+    public NodeDuressTrackers getNodeDuressTrackers() {
+        return nodeDuressTrackers;
+    }
+
+    public Boolean queryGroupServiceEnabled() {
+        return queryGroupServiceEnabled;
+    }
+
+    private NodeDuressTrackers setupNodeDuressTracker(Settings settings, ClusterSettings clusterSettings) {
+        NodeDuressSettings nodeDuressSettings = new NodeDuressSettings(settings, clusterSettings);
+        return new NodeDuressTrackers(new EnumMap<>(ResourceType.class) {
+            {
+                put(
+                    ResourceType.CPU,
+                    new NodeDuressTrackers.NodeDuressTracker(
+                        () -> ProcessProbe.getInstance().getProcessCpuPercent() / 100.0 >= nodeDuressSettings.getCpuThreshold(),
+                        nodeDuressSettings::getNumSuccessiveBreaches
+                    )
+                );
+                put(
+                    ResourceType.MEMORY,
+                    new NodeDuressTrackers.NodeDuressTracker(
+                        () -> JvmStats.jvmStats().getMem().getHeapUsedPercent() / 100.0 >= nodeDuressSettings.getHeapThreshold(),
+                        nodeDuressSettings::getNumSuccessiveBreaches
+                    )
+                );
+            }
+        });
     }
 
     /**

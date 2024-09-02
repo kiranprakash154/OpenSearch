@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -54,22 +53,19 @@ public class DefaultTaskCancellation {
     protected final Map<String, QueryGroupLevelResourceUsageView> queryGroupLevelResourceUsageViews;
     protected final Collection<QueryGroup> activeQueryGroups;
     protected final Collection<QueryGroup> deletedQueryGroups;
-    protected BooleanSupplier isNodeInDuress;
 
     public DefaultTaskCancellation(
         WorkloadManagementSettings workloadManagementSettings,
         DefaultTaskSelectionStrategy defaultTaskSelectionStrategy,
         Map<String, QueryGroupLevelResourceUsageView> queryGroupLevelResourceUsageViews,
         Collection<QueryGroup> activeQueryGroups,
-        Collection<QueryGroup> deletedQueryGroups,
-        BooleanSupplier isNodeInDuress
+        Collection<QueryGroup> deletedQueryGroups
     ) {
         this.workloadManagementSettings = workloadManagementSettings;
         this.defaultTaskSelectionStrategy = defaultTaskSelectionStrategy;
         this.queryGroupLevelResourceUsageViews = queryGroupLevelResourceUsageViews;
         this.activeQueryGroups = activeQueryGroups;
         this.deletedQueryGroups = deletedQueryGroups;
-        this.isNodeInDuress = isNodeInDuress;
     }
 
     /**
@@ -82,8 +78,12 @@ public class DefaultTaskCancellation {
         handleNodeDuress();
     }
 
+    protected boolean isNodeInDuress() {
+        return workloadManagementSettings.getNodeDuressTrackers().isNodeInDuress();
+    }
+
     private void handleNodeDuress() {
-        if (!isNodeInDuress.getAsBoolean()) {
+        if (!isNodeInDuress()) {
             return;
         }
         // List of tasks to be executed in order if the node is in duress
@@ -93,7 +93,7 @@ public class DefaultTaskCancellation {
         );
 
         for (Consumer<Void> duressAction : duressActions) {
-            if (!isNodeInDuress.getAsBoolean()) {
+            if (!isNodeInDuress()) {
                 break;
             }
             duressAction.accept(null);

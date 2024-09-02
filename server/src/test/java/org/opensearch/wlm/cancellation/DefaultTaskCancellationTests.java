@@ -47,14 +47,7 @@ public class DefaultTaskCancellationTests extends OpenSearchTestCase {
             Set<QueryGroup> deletedQueryGroups,
             BooleanSupplier isNodeInDuress
         ) {
-            super(
-                workloadManagementSettings,
-                defaultTaskSelectionStrategy,
-                queryGroupLevelViews,
-                activeQueryGroups,
-                deletedQueryGroups,
-                isNodeInDuress
-            );
+            super(workloadManagementSettings, defaultTaskSelectionStrategy, queryGroupLevelViews, activeQueryGroups, deletedQueryGroups);
         }
     }
 

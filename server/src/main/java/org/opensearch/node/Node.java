@@ -269,8 +269,10 @@ import org.opensearch.transport.TransportService;
 import org.opensearch.usage.UsageService;
 import org.opensearch.watcher.ResourceWatcherService;
 import org.opensearch.wlm.QueryGroupService;
+import org.opensearch.wlm.WorkloadManagementSettings;
 import org.opensearch.wlm.WorkloadManagementTransportInterceptor;
 import org.opensearch.wlm.listeners.QueryGroupRequestOperationListener;
+import org.opensearch.wlm.tracker.QueryGroupResourceUsageTrackerService;
 
 import javax.net.ssl.SNIHostName;
 
@@ -1020,8 +1022,21 @@ public class Node implements Closeable {
             List<IdentityAwarePlugin> identityAwarePlugins = pluginsService.filterPlugins(IdentityAwarePlugin.class);
             identityService.initializeIdentityAwarePlugins(identityAwarePlugins);
 
-            final QueryGroupService queryGroupService = new QueryGroupService(); // We will need to replace this with actual instance of the
-                                                                                 // queryGroupService
+            QueryGroupResourceUsageTrackerService queryGroupResourceUsageTrackerService = new QueryGroupResourceUsageTrackerService(
+                taskResourceTrackingService
+            );
+            WorkloadManagementSettings workloadManagementSettings = new WorkloadManagementSettings(
+                settings,
+                settingsModule.getClusterSettings()
+            );
+            final QueryGroupService queryGroupService = new QueryGroupService(
+                queryGroupResourceUsageTrackerService,
+                clusterService,
+                threadPool,
+                workloadManagementSettings,
+                new HashMap<>()
+            ); // We will need to replace this with actual instance of the
+               // queryGroupService
             final QueryGroupRequestOperationListener queryGroupRequestOperationListener = new QueryGroupRequestOperationListener(
                 queryGroupService,
                 threadPool
@@ -1087,7 +1102,13 @@ public class Node implements Closeable {
 
             WorkloadManagementTransportInterceptor workloadManagementTransportInterceptor = new WorkloadManagementTransportInterceptor(
                 threadPool,
-                new QueryGroupService() // We will need to replace this with actual implementation
+                new QueryGroupService(
+                    queryGroupResourceUsageTrackerService,
+                    clusterService,
+                    threadPool,
+                    workloadManagementSettings,
+                    new HashMap<>()
+                ) // We will need to replace this with actual implementation
             );
 
             final Collection<SecureSettingsFactory> secureSettingsFactories = pluginsService.filterPlugins(Plugin.class)
